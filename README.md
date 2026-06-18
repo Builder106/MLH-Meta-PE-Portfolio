@@ -1,79 +1,98 @@
-# Production Engineering - Week 1 - Portfolio Site
+# `26.SUM.B.6` — a pod, rendered as a fleet
 
-Welcome to the MLH Fellowship! During Week 1, you'll be using Flask to build a portfolio site. This site will be the foundation for activities we do in future weeks so spend time this week making it your own and reflect your personality!
+> A team portfolio for our MLH × Meta Production Engineering pod. The site is an
+> **ops console for a fleet**: the pod is a cluster, each teammate is a service.
+> Built with Flask + Jinja for Week 1 of the fellowship.
 
-## Tasks
+[![CI](https://github.com/Builder106/MLH-Meta-PE-Portfolio/actions/workflows/ci.yml/badge.svg)](https://github.com/Builder106/MLH-Meta-PE-Portfolio/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/python-3.12%2B-3776AB.svg)](https://www.python.org/)
+[![Flask](https://img.shields.io/badge/Flask-3.1-000000.svg)](https://flask.palletsprojects.com/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-3fb950.svg)](#license)
+[![MLH Fellowship](https://img.shields.io/badge/MLH-Production%20Engineering-264de4.svg)](https://fellowship.mlh.io/programs/production-engineering)
 
-Once you've got your portfolio downloaded and running using the instructions below, you should attempt to complete the following tasks.
+## The idea
 
-For each of these tasks, you should create an [Issue](https://docs.github.com/en/issues/tracking-your-work-with-issues/about-issues) and work on them in a new [branch](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-branches). When the task has been completed, you should open a [Pull Request](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests) and get another fellow in your pod to give you feedback before merging it in.
+Week 1's rubric is a list of generic portfolio tasks (about, work, education,
+hobbies, a travel map). Rather than fill the stock blue template, the whole site
+is reframed as a **status page for a pod**:
 
-*Note: Make sure to include a link to the Issue you're progressing on inside of your Pull Request so your reviewer knows what you're progressing on!*
+- **`/`** — the **fleet overview**: every teammate listed as a service, with
+  status, region, and a deploy count.
+- **`/u/<handle>`** — a member's detail page, where the rubric rows become
+  systems primitives:
 
-### GitHub Tasks
-- [x] Create Issues for each task below
-- [x] Progress on each task in a new branch
-- [x] Open a Pull Request when a task is finished to get feedback
+  | Rubric task | Rendered as |
+  | --- | --- |
+  | Hero + photo | **Status header** — avatar, role / region, live clock |
+  | About | **`whoami`** — a terminal block / service description |
+  | Work experience | **`deploy.log`** — each role & project as a deployment |
+  | Education | **build provenance** — where the build was compiled from |
+  | Travel map | **edge network** — visited cities as Points of Presence |
 
-### Portfolio Tasks
-- [x] Add a photo of yourself to the website
-- [x] Add an "About youself" section to the website.
-- [x] Add your previous work experiences
-- [x] Add your hobbies (including images)
-- [x] Add your current/previous education
-- [x] Add a map of all the cool locations/countries you visited
+- **`/ps_aux`** — a **fleet-wide** background-process view: everyone's hobbies as
+  running processes, tagged by owner.
 
-### Flask Tasks
-- [x] Get your Flask app running locally on your machine using the instructions below.
-- [x] Add a template for adding multiple work experiences/education/hobbies using [Jinja](https://jinja.palletsprojects.com/en/3.0.x/api/#basics)
-- [x] Create a new page to display hobbies.
-- [x] Add a menu bar that dynamically displays other pages in the app
+The menu bar and every member page are generated from one `MEMBERS` list, so
+adding a teammate is a data edit, not a template change.
 
-
-## Getting Started
-
-You need to do all your progress here.
-
-## Installation
-
-Make sure you have python3 and pip installed
-
-Create and activate virtual environment using virtualenv
-```bash
-$ python -m venv python3-virtualenv
-$ source python3-virtualenv/bin/activate
-```
-
-Use the package manager [pip](https://pip.pypa.io/en/stable/) to install all dependencies!
+## Quickstart
 
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
+flask run
 ```
 
-## Usage
+Open <http://127.0.0.1:5000>. There's also a `/healthz` liveness probe that
+returns the pod's status as JSON, because of course a fleet has one.
 
-Create a .env file using the example.env template (make a copy using the variables inside of the template)
+> The 2021-era template pinned Flask 2.0.1, which won't build on Python 3.12+.
+> Dependencies were modernized to Flask 3.1 (tested on Python 3.14).
 
-Start flask development server
-```bash
-$ export FLASK_ENV=development
-$ flask run
+## How it works
+
+```mermaid
+flowchart LR
+    A[data.py<br/>POD + MEMBERS] --> B[Flask routes<br/>app/__init__.py]
+    B --> C[Jinja templates<br/>base + macros]
+    C --> D[(rendered HTML)]
+    B -. nav built from MEMBERS .-> C
+    C -. Leaflet + CARTO tiles .-> D
 ```
 
-You should get a response like this in the terminal:
+- **`app/data.py`** holds `POD` plus a `MEMBERS` list. Each member is a dict with
+  their about / experience / education / hobbies / places.
+- **Routes** (`app/__init__.py`): `/` (fleet), `/u/<handle>` (member),
+  `/ps_aux` (fleet hobbies), `/healthz`. The nav is built from `MEMBERS`.
+- **`app/templates/macros.html`** holds reusable macros (`deploy_row`,
+  `provenance_card`, `process_card`); pages just loop over the data.
+
+## Project structure
+
 ```
-❯ flask run
- * Environment: development
- * Debug mode: on
- * Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
+app/
+├── __init__.py          # Flask app, routes, MEMBERS-driven nav, 404 handler
+├── data.py              # ← POD + MEMBERS (all content lives here)
+├── static/
+│   ├── img/             # favicon, per-member avatars + hobby photos
+│   └── styles/main.css  # the "ops console" design system
+└── templates/
+    ├── base.html        # layout: dynamic nav + footer status bar
+    ├── macros.html      # reusable Jinja macros for repeating sections
+    ├── fleet.html       # / — the fleet overview
+    ├── member.html      # /u/<handle> — a member's detail page
+    ├── hobbies.html     # /ps_aux — fleet-wide background processes
+    └── 404.html         # no-such-service page
 ```
 
-You'll now be able to access the website at `localhost:5000` or `127.0.0.1:5000` in the browser! 
+## Adding yourself / contributing
 
-*Note: The portfolio site will only work on your local machine while you have it running inside of your terminal. We'll go through how to host it in the cloud in the next few weeks!* 
+This is a team repo — see **[CONTRIBUTING.md](CONTRIBUTING.md)**. The short
+version: copy `MEMBER_TEMPLATE` in [`app/data.py`](app/data.py) into `MEMBERS`,
+drop a square photo at `app/static/img/<your-handle>.jpg`, and open a PR. You'll
+get your own page and a nav tab automatically.
 
-## Contributing
+## License
 
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
-
-Please make sure to update tests as appropriate.
+[MIT](LICENSE) © the 26.SUM.B.6 pod
