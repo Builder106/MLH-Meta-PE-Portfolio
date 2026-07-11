@@ -44,6 +44,18 @@ class TimelinePost(Model):
 
 db.connect()
 db.create_tables([TimelinePost])
+db.close()
+
+
+@app.before_request
+def _db_connect():
+    db.connect(reuse_if_open=True)
+
+
+@app.teardown_request
+def _db_close(exc):
+    if not db.is_closed():
+        db.close()
 
 
 def gravatar_url(email, size=64):
