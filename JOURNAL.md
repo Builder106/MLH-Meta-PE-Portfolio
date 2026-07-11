@@ -2,6 +2,18 @@
 
 > Dated log of decisions and notes. Reverse-chronological; one paragraph max.
 
+## 2026-07-11 — MySQL-backed timeline #decision
+
+Week 4 calls for a public timeline (peewee + MySQL) added to the existing routes.
+Kept the connection and the TimelinePost model directly in app/__init__.py
+instead of splitting into a models.py: the assignment's own deliverable links
+straight to that file, and grading expects the MySQL wiring to be visible
+there. Local dev uses the exact myportfolio/mypassword credentials from the
+assignment; the VPS gets its own generated password in a gitignored .env
+instead, since that box sits on the open internet. Also added a MySQL service
+container to CI, since the app now connects to a database at import time and
+the smoke suite would otherwise fail on every PR.
+
 ## 2026-06-17 — CI + contributor onboarding #decision
 
 Added a GitHub Actions workflow (ruff + a pytest smoke suite over every route)

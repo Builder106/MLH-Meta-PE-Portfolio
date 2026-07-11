@@ -18,6 +18,29 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.12", "3.13"]
+    # The app connects to MySQL at import time (Week 4's timeline feature), so
+    # the smoke suite needs a real database, not just a mock.
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: myportfoliodb
+          MYSQL_USER: myportfolio
+          MYSQL_PASSWORD: mypassword
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      MYSQL_HOST: 127.0.0.1
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: myportfoliodb
+      MYSQL_USER: myportfolio
+      MYSQL_PASSWORD: mypassword
     steps:
       - uses: actions/checkout@v4
 
