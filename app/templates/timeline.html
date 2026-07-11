@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="section section--first" id="timeline">
+  <h2>Timeline</h2>
+  <p class="lead" style="margin-bottom:22px">Post a school or career update — it shows up below, newest first.</p>
+
+  <form id="timeline-form" class="timeline-form" novalidate>
+    <div class="field-row">
+      <label class="field">
+        <span>Name</span>
+        <input type="text" name="name" autocomplete="name" required maxlength="80" placeholder="Ada Lovelace">
+      </label>
+      <label class="field">
+        <span>Email</span>
+        <input type="email" name="email" autocomplete="email" required maxlength="160" placeholder="ada@example.com">
+      </label>
+    </div>
+    <label class="field">
+      <span>Update</span>
+      <textarea name="content" required maxlength="2000" rows="3" placeholder="Just shipped a new feature..."></textarea>
+    </label>
+    <div class="form-footer">
+      <p id="timeline-error" class="form-error" hidden></p>
+      <button type="submit">Post update</button>
+    </div>
+  </form>
+
+  <ul id="timeline-list" class="timeline-list">
+    {% for post in posts %}
+    <li class="timeline-post" data-post-id="{{ post.id }}">
+      <img class="timeline-avatar" src="{{ gravatar_url(post.email) }}" alt="" width="40" height="40" loading="lazy">
+      <div class="timeline-body">
+        <div class="timeline-meta">
+          <span class="timeline-name">{{ post.name }}</span>
+          <span class="item-date">{{ post.created_at.strftime("%Y-%m-%d %H:%M UTC") }}</span>
+        </div>
+        <p class="timeline-content">{{ post.content }}</p>
+      </div>
+    </li>
+    {% else %}
+    <li class="note" id="timeline-empty">No updates yet — be the first to post one.</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const timelineForm = document.getElementById("timeline-form");
+  const timelineList = document.getElementById("timeline-list");
+  const timelineError = document.getElementById("timeline-error");
+
+  function formatTimestamp(value) {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return value;
+    return parsed.toISOString().slice(0, 16).replace("T", " ") + " UTC";
+  }
+
+  function renderPost(post) {
+    const item = document.createElement("li");
+    item.className = "timeline-post";
+    item.dataset.postId = post.id;
+
+    const avatar = document.createElement("img");
+    avatar.className = "timeline-avatar";
+    avatar.src = post.gravatar;
+    avatar.alt = "";
+    avatar.width = 40;
+    avatar.height = 40;
+    avatar.loading = "lazy";
+
+    const body = document.createElement("div");
+    body.className = "timeline-body";
+
+    const meta = document.createElement("div");
+    meta.className = "timeline-meta";
+
+    const name = document.createElement("span");
+    name.className = "timeline-name";
+    name.textContent = post.name;
+
+    const date = document.createElement("span");
+    date.className = "item-date";
+    date.textContent = formatTimestamp(post.created_at);
+
+    meta.append(name, date);
+
+    const content = document.createElement("p");
+    content.className = "timeline-content";
+    content.textContent = post.content;
+
+    body.append(meta, content);
+    item.append(avatar, body);
+    return item;
+  }
+
+  timelineForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    timelineError.hidden = true;
+
+    const payload = Object.fromEntries(new FormData(timelineForm).entries());
+
+    let response;
+    try {
+      response = await fetch("/api/timeline_post", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    } catch {
+      timelineError.textContent = "Couldn't reach the server — try again.";
+      timelineError.hidden = false;
+      return;
+    }
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      timelineError.textContent = data.error || "Couldn't post that update — try again.";
+      timelineError.hidden = false;
+      return;
+    }
+
+    document.getElementById("timeline-empty")?.remove();
+    timelineList.prepend(renderPost(data));
+    timelineForm.reset();
+  });
+</script>
+{% endblock %}
