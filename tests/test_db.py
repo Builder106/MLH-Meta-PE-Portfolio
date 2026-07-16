@@ -1,25 +1,23 @@
-"""Database tests — verify TimelinePost read/write against the app's
-in-memory SQLite database (TESTING=true), independent of MySQL.
-
-Note: don't follow Peewee's testing docs literally here and bind
-TimelinePost to a second, throwaway SqliteDatabase — Model.bind() mutates
-the model class globally, so it leaks across test modules in the same
-process and breaks test_app.py/test_smoke.py, which expect TimelinePost
-still bound to the app's own db. Clearing rows between tests on the
-existing db avoids that.
-"""
 import os
 os.environ.setdefault("TESTING", "true")
+import peewee
 
 import unittest
 from datetime import date, datetime
 
 from app import TimelinePost, _ordered_posts
 
+test_db = peewee.SqliteDatabase(":memory:")
 
 class TestTimelinePost(unittest.TestCase):
     def setUp(self):
-        TimelinePost.delete().execute()
+        self._ctx = test_db.bind_ctx([TimelinePost])
+        self._ctx.__enter__()
+        test_db.create_tables([TimelinePost])
+
+    def tearDown(self):
+        test_db.drop_tables([TimelinePost])
+        self._ctx.__exit__(None, None, None)
 
     def test_create_and_retrieve_post(self):
         TimelinePost.create(

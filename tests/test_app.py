@@ -40,42 +40,42 @@ class TestTimelineEndpoints(unittest.TestCase):
         self.client.delete(f"/api/timeline_post/{created['id']}")
 
     # TODO 3: deleting a post
-    # def test_delete_timeline_post(self):
-    #     created = self.client.post("/api/timeline_post", json={
-    #         "name": "Grace Hopper", "email": "grace@example.com",
-    #         "content": "Found the first bug.",
-    #     }).get_json()
+    def test_delete_timeline_post(self):
+        created = self.client.post("/api/timeline_post", json={
+            "name": "Grace Hopper", "email": "grace@example.com",
+            "content": "Found the first bug.",
+        }).get_json()
 
-    #     resp = self.client.delete(f"/api/timeline_post/{created['id']}")
+        resp = self.client.delete(f"/api/timeline_post/{created['id']}")
 
-    #     self.assertEqual(resp.status_code, 200)
-    #     remaining = self.client.get("/api/timeline_post").get_json()
-    #     self.assertFalse(any(p["id"] == created["id"] for p in remaining))
+        self.assertEqual(resp.status_code, 200)
+        remaining = self.client.get("/api/timeline_post").get_json()
+        self.assertFalse(any(p["id"] == created["id"] for p in remaining))
 
     # --- TDD: written before the app supported them, both drove a fix ---
 
-    # def test_create_timeline_post_rejects_malformed_email(self):
-    #     resp = self.client.post("/api/timeline_post", json={
-    #         "name": "Ada Lovelace", "email": "not-an-email",
-    #         "content": "Shipped the first program.",
-    #     })
-    #     self.assertEqual(resp.status_code, 400)
+    def test_create_timeline_post_rejects_malformed_email(self):
+        resp = self.client.post("/api/timeline_post", json={
+            "name": "Ada Lovelace", "email": "not-an-email",
+            "content": "Shipped the first program.",
+        })
+        self.assertEqual(resp.status_code, 400)
 
-    # def test_get_single_timeline_post(self):
-    #     created = self.client.post("/api/timeline_post", json={
-    #         "name": "Ada Lovelace", "email": "ada@example.com",
-    #         "content": "Shipped the first program.",
-    #     }).get_json()
+    def test_get_single_timeline_post(self):
+        created = self.client.post("/api/timeline_post", json={
+            "name": "Ada Lovelace", "email": "ada@example.com",
+            "content": "Shipped the first program.",
+        }).get_json()
 
-        # resp = self.client.get(f"/api/timeline_post/{created['id']}")
+        resp = self.client.get(f"/api/timeline_post/{created['id']}")
 
-        # self.assertEqual(resp.status_code, 200)
-        # self.assertEqual(resp.get_json()["id"], created["id"])
-        # self.client.delete(f"/api/timeline_post/{created['id']}")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.get_json()["id"], created["id"])
+        self.client.delete(f"/api/timeline_post/{created['id']}")
 
-    # def test_get_single_timeline_post_404_for_missing_id(self):
-    #     resp = self.client.get("/api/timeline_post/999999")
-    #     self.assertEqual(resp.status_code, 404)
+    def test_get_single_timeline_post_404_for_missing_id(self):
+        resp = self.client.get("/api/timeline_post/999999")
+        self.assertEqual(resp.status_code, 404)
 
     # Added by Chloe from here
 
@@ -126,18 +126,18 @@ class TestTimelineEndpoints(unittest.TestCase):
         self.assertEqual(body["name"], "Ada Lovelace")
         self.client.delete(f"/api/timeline_post/{body['id']}")
 
-    # def test_get_timeline_post_null_fields_round_trip(self):
-    #     created = self.client.post("/api/timeline_post", json={
-    #         "name": "Ada Lovelace", "email": "ada@example.com",
-    #         "content": "Shipped the first program.",
-    #     }).get_json()
+    def test_get_timeline_post_null_fields_round_trip(self):
+        created = self.client.post("/api/timeline_post", json={
+            "name": "Ada Lovelace", "email": "ada@example.com",
+            "content": "Shipped the first program.",
+        }).get_json()
 
-        # resp = self.client.get(f"/api/timeline_post/{created['id']}")
+        resp = self.client.get(f"/api/timeline_post/{created['id']}")
 
-        # body = resp.get_json()
-        # self.assertIsNone(body["event_date"])
-        # self.assertIsNone(body["image"])
-        # self.client.delete(f"/api/timeline_post/{created['id']}")
+        body = resp.get_json()
+        self.assertIsNone(body["event_date"])
+        self.assertIsNone(body["image"])
+        self.client.delete(f"/api/timeline_post/{created['id']}")
 
 
 if __name__ == "__main__":
