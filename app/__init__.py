@@ -7,12 +7,13 @@ header, ``whoami``, ``deploy.log``, build provenance, edge network — and
 """
 import itertools
 import os
+import re
 from datetime import datetime, timezone
 
 from dotenv import load_dotenv
 from flask import Flask, render_template, request, url_for, jsonify
 
-from peewee import CharField, DateField, DateTimeField, Model, MySQLDatabase, TextField, fn
+from peewee import CharField, DateField, DateTimeField, Model, MySQLDatabase, SqliteDatabase, TextField, fn
 from playhouse.migrate import MySQLMigrator, migrate
 from playhouse.shortcuts import model_to_dict
 
@@ -22,13 +23,22 @@ load_dotenv()
 
 app = Flask(__name__)
 
-db = MySQLDatabase(
-    os.getenv("MYSQL_DATABASE"),
-    host=os.getenv("MYSQL_HOST", "localhost"),
-    port=int(os.getenv("MYSQL_PORT", 3306)),
-    user=os.getenv("MYSQL_USER"),
-    password=os.getenv("MYSQL_PASSWORD"),
-)
+# Tests set TESTING=true so the suite runs against an isolated in-memory
+# SQLite database instead of requiring a real MySQL instance.
+TESTING = os.getenv("TESTING", "false").lower() == "true"
+
+if TESTING:
+    db = SqliteDatabase(":memory:")
+else:
+    db = MySQLDatabase(
+        os.getenv("MYSQL_DATABASE"),
+        host=os.getenv("MYSQL_HOST", "localhost"),
+        port=int(os.getenv("MYSQL_PORT", 3306)),
+        user=os.getenv("MYSQL_USER"),
+        password=os.getenv("MYSQL_PASSWORD"),
+    )
+
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 class TimelinePost(Model):
@@ -52,13 +62,21 @@ class TimelinePost(Model):
 
 db.connect()
 db.create_tables([TimelinePost])
-existing_columns = {c.name for c in db.get_columns(TimelinePost._meta.table_name)}
-migrator = MySQLMigrator(db)
-if "event_date" not in existing_columns:
-    migrate(migrator.add_column(TimelinePost._meta.table_name, "event_date", TimelinePost.event_date))
-if "image" not in existing_columns:
-    migrate(migrator.add_column(TimelinePost._meta.table_name, "image", TimelinePost.image))
-db.close()
+if not TESTING:
+    # SQLite gets the event_date/image columns for free since the in-memory
+    # database is always created fresh from the current Model definition —
+    # only the long-lived MySQL database needs a migration path.
+    existing_columns = {c.name for c in db.get_columns(TimelinePost._meta.table_name)}
+    migrator = MySQLMigrator(db)
+    if "event_date" not in existing_columns:
+        migrate(migrator.add_column(TimelinePost._meta.table_name, "event_date", TimelinePost.event_date))
+    if "image" not in existing_columns:
+        migrate(migrator.add_column(TimelinePost._meta.table_name, "image", TimelinePost.image))
+if not TESTING:
+    db.close()
+# When TESTING, leave the in-memory SQLite connection open — closing it
+# would wipe every row created since the database only lives as long as
+# its connection does.
 
 
 @app.before_request
@@ -68,6 +86,10 @@ def _db_connect():
 
 @app.teardown_request
 def _db_close(exc):
+    # Keep the in-memory SQLite connection open for the life of the test
+    # process; closing it deletes the database.
+    if TESTING:
+        return
     if not db.is_closed():
         db.close()
 
@@ -142,6 +164,8 @@ def create_timeline_post():
     image = (payload.get("image") or "").strip()
     if not name or not email or not content:
         return jsonify(error="name, email, and content are all required"), 400
+    if not EMAIL_RE.match(email):
+        return jsonify(error="email must be a valid email address"), 400
     event_date = None
     if event_date_raw:
         try:
@@ -158,6 +182,14 @@ def create_timeline_post():
 @app.route("/api/timeline_post", methods=["GET"])
 def list_timeline_posts():
     return jsonify([serialize_post(p) for p in _ordered_posts()])
+
+
+@app.route("/api/timeline_post/<int:post_id>", methods=["GET"])
+def get_timeline_post(post_id):
+    post = TimelinePost.get_or_none(TimelinePost.id == post_id)
+    if post is None:
+        return jsonify(error="not found"), 404
+    return jsonify(serialize_post(post))
 
 
 @app.route("/api/timeline_post/<int:post_id>", methods=["DELETE"])
