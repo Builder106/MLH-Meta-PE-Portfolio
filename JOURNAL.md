@@ -2,6 +2,18 @@
 
 > Dated log of decisions and notes. Reverse-chronological; one paragraph max.
 
+## 2026-07-20 — Added dockerized nginx-certbot for HTTPS #decision
+
+Week 6 Task 3 fronts the app with an nginx service (`jonasal/nginx-certbot`)
+for automatic Let's Encrypt SSL, replacing myportfolio's direct `5000:5000`
+port mapping — internet traffic now hits nginx on 80/443, which proxies
+internally to `myportfolio:5000` over the compose network. The VPS already
+had an unrelated host-level nginx (not part of this curriculum) reverse-
+proxying port 80 to `127.0.0.1:5000` with no SSL; it occupies the same ports
+the new container needs, so it has to be stopped and removed at deploy time
+before the new nginx container can bind. Cert name is `myportfolio`, matching
+the project's existing naming.
+
 ## 2026-07-20 — Containerized the app with Docker Compose #decision
 
 Week 6 asks for a Dockerfile plus dev/prod `docker-compose.yml` variants:
