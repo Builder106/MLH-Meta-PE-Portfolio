@@ -15,3 +15,7 @@ python-dotenv==1.2.2
 peewee==4.1.2
 PyMySQL==1.2.0
 cryptography==49.0.0
+
+# Week 6 — container/prod entrypoint. Was installed ad hoc in the VPS venv
+# for the systemd deploy but never pinned here; the Dockerfile CMD needs it.
+gunicorn==23.0.0

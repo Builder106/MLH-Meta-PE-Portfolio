@@ -1,0 +1,28 @@
+services:
+  myportfolio:
+    build: .
+    restart: always
+    env_file:
+      - .env
+    environment:
+      FLASK_ENV: development
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/myportfolio
+    depends_on:
+      - mysql
+
+  mysql:
+    image: mariadb
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mydatabase:/var/lib/mysql
+
+volumes:
+  mydatabase:

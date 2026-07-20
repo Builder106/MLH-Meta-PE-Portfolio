@@ -2,6 +2,18 @@
 
 > Dated log of decisions and notes. Reverse-chronological; one paragraph max.
 
+## 2026-07-20 — Containerized the app with Docker Compose #decision
+
+Week 6 asks for a Dockerfile plus dev/prod `docker-compose.yml` variants:
+`myportfolio` (gunicorn, matching how the VPS already serves it) alongside a
+`mysql`/mariadb service on a named volume, so timeline data survives `compose
+down`. Added a `.dockerignore` too — `.gitignore` only keeps files out of git,
+not out of the Docker build context, so without it `COPY . .` would have
+baked the local `.env` (real DB credentials) directly into the image layer.
+`requirements.txt` was also missing `gunicorn`: it had been installed ad hoc
+into the VPS venv for the systemd deploy back in Week 4 but never pinned,
+which the Dockerfile build would otherwise have failed on.
+
 ## 2026-07-11 — Corrected the team/fleet framing — this is an individual portfolio #decision
 
 Every fellow does their own portfolio; there's no pod-shared repo. The

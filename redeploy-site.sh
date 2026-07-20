@@ -2,20 +2,17 @@
 set -e
 
 PROJECT_DIR="$HOME/MLH-Meta-PE-Portfolio"
-VENV_DIR="$PROJECT_DIR/python3-virtualenv"
 
 echo "Pulling latest changes from main..."
 cd "$PROJECT_DIR"
 git fetch
 git reset origin/main --hard
 
-echo "Installing dependencies..."
-source "$VENV_DIR/bin/activate"
-pip install -r requirements.txt
-deactivate
+echo "Stopping containers (avoids OOM on this box while the next build runs)..."
+docker compose -f docker-compose.prod.yml down
 
-echo "Restarting Flask server (gunicorn via systemd)..."
-systemctl restart portfolio.service
+echo "Rebuilding and starting containers..."
+docker compose -f docker-compose.prod.yml up -d --build
 
-echo "Done. Service status:"
-systemctl is-active portfolio.service
+echo "Done. Container status:"
+docker compose -f docker-compose.prod.yml ps
