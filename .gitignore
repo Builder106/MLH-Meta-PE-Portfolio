@@ -9,3 +9,4 @@ flask.sqlite
 .env
 __pycache__/
 *.pyc
+backups/
